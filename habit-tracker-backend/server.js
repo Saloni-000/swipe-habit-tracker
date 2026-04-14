@@ -1,14 +1,23 @@
 import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pkg from 'pg';
 import dotenv from 'dotenv';
 
+const { Pool } = pkg;
 dotenv.config();
 
 const app = express();
 
-// Simple Prisma initialization - works with both SQLite and PostgreSQL
-const prisma = new PrismaClient();
+// PostgreSQL adapter for production
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 // CORS configuration
 const allowedOrigins = [
@@ -265,41 +274,6 @@ app.post('/api/responses', async (req, res) => {
     res.json(habitResponse);
   } catch (error) {
     console.error('Error recording response:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/habits/:id/stats', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const habit = await prisma.habit.findUnique({
-      where: { id },
-      include: {
-        streak: true,
-        responses: {
-          orderBy: { date: 'desc' },
-          take: 30
-        }
-      }
-    });
-    
-    if (!habit) {
-      return res.status(404).json({ error: 'Habit not found' });
-    }
-    
-    const stats = {
-      total: habit.responses.length,
-      yes: habit.responses.filter(r => r.response === 'yes').length,
-      no: habit.responses.filter(r => r.response === 'no').length,
-      skip: habit.responses.filter(r => r.response === 'skip').length,
-      streak: habit.streak,
-      recentResponses: habit.responses
-    };
-    
-    res.json(stats);
-  } catch (error) {
-    console.error('Error fetching stats:', error);
     res.status(500).json({ error: error.message });
   }
 });
