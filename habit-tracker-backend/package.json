@@ -10,20 +10,15 @@
     "postinstall": "npx prisma generate"
   },
   "dependencies": {
-    "@prisma/adapter-better-sqlite3": "^7.7.0",
-    "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
-    "better-sqlite3": "^11.5.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "pg": "^8.20.0"
+    "pg": "^8.11.3"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
     "nodemon": "^3.1.14",
-    "prisma": "^7.7.0",
-    "typescript": "^6.0.2"
+    "prisma": "^7.7.0"
   },
   "engines": {
     "node": ">=18.0.0"

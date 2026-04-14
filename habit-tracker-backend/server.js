@@ -1,35 +1,16 @@
 import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pkg from 'pg';
 import dotenv from 'dotenv';
 
-const { Pool } = pkg;
 dotenv.config();
 
 const app = express();
 
-// Choose adapter based on environment
-let prisma;
+// Simple Prisma initialization - works with both SQLite and PostgreSQL
+const prisma = new PrismaClient();
 
-if (process.env.NODE_ENV === 'production') {
-  // PostgreSQL for production (Render)
-  console.log('🐘 Using PostgreSQL adapter for production');
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-  });
-  const adapter = new PrismaPg(pool);
-  prisma = new PrismaClient({ adapter });
-} else {
-  // SQLite for local development
-  console.log('📁 Using SQLite adapter for development');
-  const adapter = new PrismaBetterSqlite3({ url: 'file:./dev.db' });
-  prisma = new PrismaClient({ adapter });
-}
-
+// CORS configuration
 const allowedOrigins = [
   'https://swipe-habit-tracker.vercel.app',
   'http://localhost:5173',
@@ -38,21 +19,15 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       console.log('Blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  credentials: true
 }));
-
 
 app.use(express.json());
 
@@ -332,13 +307,11 @@ app.get('/api/habits/:id/stats', async (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    timestamp: new Date().toISOString()
   });
 });
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-  console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
