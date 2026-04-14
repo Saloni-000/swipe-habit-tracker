@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
-const HabitForm = ({ onSubmit, onClose }) => {
+const HabitForm = ({ onSubmit, onClose, initialData = null }) => {
   const [formData, setFormData] = useState({
     name: '',
     question: '',
@@ -18,6 +18,17 @@ const HabitForm = ({ onSubmit, onClose }) => {
     { value: 5, label: 'F', full: 'Fri' },
     { value: 6, label: 'S', full: 'Sat' }
   ];
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        question: initialData.question || '',
+        frequency: initialData.frequency || 'daily',
+        customDays: initialData.customDays ? JSON.parse(initialData.customDays) : []
+      });
+    }
+  }, [initialData]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -64,6 +75,8 @@ const HabitForm = ({ onSubmit, onClose }) => {
     return `${selectedDays.length} days per week`;
   };
 
+  const isEditMode = !!initialData;
+
   return (
     <motion.div 
       className="modal-overlay"
@@ -80,7 +93,7 @@ const HabitForm = ({ onSubmit, onClose }) => {
         onClick={e => e.stopPropagation()}
       >
         <div className="modal-header">
-          <h2>New Habit</h2>
+          <h2>{isEditMode ? 'Edit Habit' : 'New Habit'}</h2>
           <button className="close-button" onClick={onClose}>×</button>
         </div>
         
@@ -104,6 +117,7 @@ const HabitForm = ({ onSubmit, onClose }) => {
               onChange={e => setFormData({ ...formData, question: e.target.value })}
               placeholder="Did you meditate today?"
             />
+            <p className="field-hint">This is what you'll see on the card</p>
           </div>
           
           <div className="form-group">
@@ -116,6 +130,7 @@ const HabitForm = ({ onSubmit, onClose }) => {
               >
                 <span className="freq-icon">📅</span>
                 <span className="freq-label">Daily</span>
+                <span className="freq-desc">Every day</span>
               </button>
               <button
                 type="button"
@@ -124,6 +139,7 @@ const HabitForm = ({ onSubmit, onClose }) => {
               >
                 <span className="freq-icon">📊</span>
                 <span className="freq-label">Custom</span>
+                <span className="freq-desc">Select days</span>
               </button>
             </div>
           </div>
@@ -161,7 +177,7 @@ const HabitForm = ({ onSubmit, onClose }) => {
               Cancel
             </button>
             <button type="submit" className="submit-button">
-              Create Habit
+              {isEditMode ? 'Update' : 'Create'} Habit
             </button>
           </div>
         </form>

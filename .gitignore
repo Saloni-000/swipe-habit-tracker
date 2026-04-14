@@ -39,7 +39,12 @@ build/Release
 
 # Dependency directories
 node_modules/
-jspm_packages/
+.env
+*.log
+prisma/*.db
+prisma/*.db-journal
+dist/
+.DS_Store
 
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/

@@ -6,7 +6,7 @@ const SwipeCard = ({ habit, onSwipe }) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  const rotate = useTransform(x, [-200, 0, 200], [-15, 0, 15]);
+  const rotate = useTransform(x, [-200, 0, 200], [-12, 0, 12]);
 
   const feedbackLeftOpacity = useTransform(x, [-200, -80, 0], [1, 0.5, 0]);
   const feedbackRightOpacity = useTransform(x, [0, 80, 200], [0, 0.5, 1]);
@@ -75,7 +75,11 @@ const SwipeCard = ({ habit, onSwipe }) => {
               <span>🔥 {streak.currentStreak} day streak</span>
             </div>
           )}
-          <div className="question-text">{habit.question}</div>
+
+          <div className="question-container">
+            <div className="question-heading">{habit.name}</div>
+            <div className="question-text">{habit.question}</div>
+          </div>
 
           <div className="gesture-hints">
             <div className="hint hint-left">

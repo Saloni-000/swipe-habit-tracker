@@ -3,15 +3,15 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model Habit {
   id            String   @id @default(cuid())
   name          String
   question      String
-  frequency     String   // "daily", "weekly"
-  customDays    String?  // JSON array like "[1,3,5]"
+  frequency     String
+  customDays    String?
   isActive      Boolean  @default(true)
   order         Int      @default(0)
   createdAt     DateTime @default(now())
@@ -26,10 +26,11 @@ model HabitResponse {
   habitId     String
   habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
   date        DateTime
-  response    String   // "yes", "no", "skip"
+  response    String
   respondedAt DateTime @default(now())
 
   @@unique([habitId, date])
+  @@index([habitId, date])
 }
 
 model Streak {
@@ -44,7 +45,7 @@ model Streak {
 model DailySession {
   id              String   @id @default(cuid())
   date            DateTime @unique
-  completedHabits String   // JSON array of habit IDs
-  skippedHabits   String   // JSON array of habit IDs
+  completedHabits String
+  skippedHabits   String
   createdAt       DateTime @default(now())
 }

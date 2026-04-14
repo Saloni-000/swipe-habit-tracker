@@ -12,7 +12,19 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
-  const [todayStats, setTodayStats] = useState({ yes: 0, no: 0, skip: 0 });
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
 
   useEffect(() => {
     loadPendingHabits();
@@ -24,14 +36,6 @@ function App() {
       const habits = await api.getTodayPending();
       setPendingHabits(habits);
       setCurrentHabitIndex(0);
-      
-      const stats = { yes: 0, no: 0, skip: 0 };
-      habits.forEach(h => {
-        if (h.todayResponse) {
-          stats[h.todayResponse]++;
-        }
-      });
-      setTodayStats(stats);
     } catch (error) {
       toast.error('Failed to load habits');
     } finally {
@@ -44,24 +48,20 @@ function App() {
       await api.recordResponse(habitId, direction);
       
       const updatedHabits = [...pendingHabits];
-      const currentHabit = updatedHabits[currentHabitIndex];
       
       if (direction === 'skip') {
-        updatedHabits.splice(currentHabitIndex, 1);
-        updatedHabits.push(currentHabit);
+        // Move skipped habit to end of queue
+        const skippedHabit = updatedHabits.splice(currentHabitIndex, 1)[0];
+        updatedHabits.push(skippedHabit);
         setPendingHabits(updatedHabits);
         toast('Skipped for now', { icon: '↻' });
       } else {
+        // Remove habit from pending
         updatedHabits.splice(currentHabitIndex, 1);
         setPendingHabits(updatedHabits);
         setCurrentHabitIndex(prev => Math.min(prev, updatedHabits.length - 1));
-        toast.success(`${direction === 'yes' ? '✓ Yes!' : '✗ No'}`);
+        toast.success(`${direction === 'yes' ? '✓' : '✗'} Recorded`);
       }
-      
-      setTodayStats(prev => ({
-        ...prev,
-        [direction]: prev[direction] + 1
-      }));
       
       if (updatedHabits.length === 0) {
         setTimeout(() => loadPendingHabits(), 500);
@@ -83,10 +83,19 @@ function App() {
   };
 
   const currentHabit = pendingHabits[currentHabitIndex];
+  const remainingCount = pendingHabits.length;
 
   return (
     <div className="app">
-      <Toaster position="top-center" />
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: theme === 'dark' ? '#2c2c2e' : '#ffffff',
+            color: theme === 'dark' ? '#ffffff' : '#1d1d1f',
+          },
+        }}
+      />
       
       <HabitList 
         isOpen={showDrawer} 
@@ -95,12 +104,20 @@ function App() {
       />
       
       <header className="app-header">
-        <button 
-          className="menu-button"
-          onClick={() => setShowDrawer(true)}
-        >
-          <span className="menu-icon">☰</span>
-        </button>
+        <div className="header-left">
+          <button 
+            className="menu-button"
+            onClick={() => setShowDrawer(true)}
+          >
+            <span className="menu-icon">☰</span>
+          </button>
+          <button 
+            className="theme-toggle"
+            onClick={toggleTheme}
+          >
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+        </div>
         <h1>swipe</h1>
         <div className="header-spacer"></div>
       </header>
@@ -114,13 +131,17 @@ function App() {
               day: 'numeric' 
             })}
           </div>
+          {remainingCount > 0 && (
+            <div className="remaining-count">
+              {remainingCount} remaining
+            </div>
+          )}
         </div>
 
         <div className="swipe-container">
           {loading ? (
             <div className="loading-card">
               <div className="loading-spinner"></div>
-              <p>Loading your habits...</p>
             </div>
           ) : currentHabit ? (
             <SwipeCard
@@ -133,7 +154,7 @@ function App() {
               <div className="completion-emoji">✨</div>
               <div className="completion-title">all caught up!</div>
               <div className="completion-subtitle">
-                You've answered everything for today
+                Come back tomorrow for more
               </div>
               <button 
                 className="add-habit-button"
@@ -144,21 +165,6 @@ function App() {
             </div>
           )}
         </div>
-
-        <div className="today-summary">
-          <div className="stat-item">
-            <div className="stat-value">{todayStats.yes}</div>
-            <div className="stat-label">yes</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-value">{todayStats.no}</div>
-            <div className="stat-label">no</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-value">{todayStats.skip}</div>
-            <div className="stat-label">skipped</div>
-          </div>
-        </div>
       </main>
 
       {showAddForm && (
@@ -168,7 +174,7 @@ function App() {
         />
       )}
 
-      {!loading && !currentHabit && (
+      {!loading && currentHabit && (
         <button 
           className="fab-add"
           onClick={() => setShowAddForm(true)}
