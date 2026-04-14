@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Habit {
+  id            String   @id @default(cuid())
+  name          String
+  question      String
+  frequency     String   // "daily", "weekly"
+  customDays    String?  // JSON array like "[1,3,5]"
+  isActive      Boolean  @default(true)
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  responses     HabitResponse[]
+  streak        Streak?
+}
+
+model HabitResponse {
+  id          String   @id @default(cuid())
+  habitId     String
+  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date        DateTime
+  response    String   // "yes", "no", "skip"
+  respondedAt DateTime @default(now())
+
+  @@unique([habitId, date])
+}
+
+model Streak {
+  id            String   @id @default(cuid())
+  habitId       String   @unique
+  habit         Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  currentStreak Int      @default(0)
+  longestStreak Int      @default(0)
+  lastUpdated   DateTime @default(now())
+}
+
+model DailySession {
+  id              String   @id @default(cuid())
+  date            DateTime @unique
+  completedHabits String   // JSON array of habit IDs
+  skippedHabits   String   // JSON array of habit IDs
+  createdAt       DateTime @default(now())
+}
