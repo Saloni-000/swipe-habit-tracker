@@ -5,10 +5,9 @@
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "npx prisma migrate deploy && node server.js",
-    "build": "chmod +x build.sh && ./build.sh",
-    "postinstall": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy"
+    "start": "npx prisma db push --accept-data-loss && node server.js",
+    "build": "npm install && npx prisma generate",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.7.0",
