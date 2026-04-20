@@ -1,25 +1,42 @@
 import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pkg from 'pg';
 import dotenv from 'dotenv';
 
-const { Pool } = pkg;
 dotenv.config();
 
 const app = express();
 
-// PostgreSQL adapter for production
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+// ============ SMART DATABASE SETUP ============
+// Automatically detects environment and uses correct adapter
+let prisma;
 
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const isProduction = process.env.NODE_ENV === 'production';
 
-// CORS configuration
+if (isProduction) {
+  // PRODUCTION (Render): Use PostgreSQL
+  console.log('🐘 Production mode: Using PostgreSQL adapter');
+  const { PrismaPg } = await import('@prisma/adapter-pg');
+  const pkg = await import('pg');
+  const { Pool } = pkg;
+  
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
+  
+  const adapter = new PrismaPg(pool);
+  prisma = new PrismaClient({ adapter });
+} else {
+  // DEVELOPMENT (Local): Use SQLite
+  console.log('📁 Development mode: Using SQLite adapter');
+  const { PrismaBetterSqlite3 } = await import('@prisma/adapter-better-sqlite3');
+  
+  const adapter = new PrismaBetterSqlite3({ url: 'file:./dev.db' });
+  prisma = new PrismaClient({ adapter });
+}
+
+// ============ CORS SETUP ============
 const allowedOrigins = [
   'https://swipe-habit-tracker.vercel.app',
   'http://localhost:5173',
@@ -278,14 +295,51 @@ app.post('/api/responses', async (req, res) => {
   }
 });
 
+app.get('/api/habits/:id/stats', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const habit = await prisma.habit.findUnique({
+      where: { id },
+      include: {
+        streak: true,
+        responses: {
+          orderBy: { date: 'desc' },
+          take: 30
+        }
+      }
+    });
+    
+    if (!habit) {
+      return res.status(404).json({ error: 'Habit not found' });
+    }
+    
+    const stats = {
+      total: habit.responses.length,
+      yes: habit.responses.filter(r => r.response === 'yes').length,
+      no: habit.responses.filter(r => r.response === 'no').length,
+      skip: habit.responses.filter(r => r.response === 'skip').length,
+      streak: habit.streak,
+      recentResponses: habit.responses
+    };
+    
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    environment: isProduction ? 'production' : 'development'
   });
 });
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
+  console.log(`📦 Environment: ${isProduction ? 'production' : 'development'}`);
 });
