@@ -7,14 +7,12 @@ dotenv.config();
 
 const app = express();
 
-// ============ SMART DATABASE SETUP ============
-// Automatically detects environment and uses correct adapter
+// SMART DATABASE SETUP
 let prisma;
 
 const isProduction = process.env.NODE_ENV === 'production';
 
 if (isProduction) {
-  // PRODUCTION (Render): Use PostgreSQL
   console.log('🐘 Production mode: Using PostgreSQL adapter');
   const { PrismaPg } = await import('@prisma/adapter-pg');
   const pkg = await import('pg');
@@ -28,7 +26,6 @@ if (isProduction) {
   const adapter = new PrismaPg(pool);
   prisma = new PrismaClient({ adapter });
 } else {
-  // DEVELOPMENT (Local): Use SQLite
   console.log('📁 Development mode: Using SQLite adapter');
   const { PrismaBetterSqlite3 } = await import('@prisma/adapter-better-sqlite3');
   
@@ -36,7 +33,7 @@ if (isProduction) {
   prisma = new PrismaClient({ adapter });
 }
 
-// ============ CORS SETUP ============
+// CORS
 const allowedOrigins = [
   'https://swipe-habit-tracker.vercel.app',
   'http://localhost:5173',
@@ -48,7 +45,6 @@ app.use(cors({
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log('Blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -137,7 +133,7 @@ app.post('/api/habits', async (req, res) => {
 app.put('/api/habits/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, question, frequency, customDays, isActive } = req.body;
+    const { name, question, frequency, customDays, isActive, order } = req.body;
     
     const habit = await prisma.habit.update({
       where: { id },
@@ -146,7 +142,8 @@ app.put('/api/habits/:id', async (req, res) => {
         question,
         frequency,
         customDays: customDays || null,
-        isActive: isActive !== undefined ? isActive : true
+        isActive: isActive !== undefined ? isActive : true,
+        order
       },
       include: { streak: true }
     });
@@ -185,6 +182,7 @@ app.get('/api/today/pending', async (req, res) => {
     });
     
     const todayHabits = habits.filter(h => shouldTrackToday(h, today));
+    
     const responses = await prisma.habitResponse.findMany({
       where: { date: { gte: today, lt: tomorrow } }
     });
@@ -237,7 +235,7 @@ app.get('/api/today/pending', async (req, res) => {
     
     res.json(habitsWithStatus);
   } catch (error) {
-    console.error('Error in /today/pending:', error);
+    console.error('Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -290,56 +288,15 @@ app.post('/api/responses', async (req, res) => {
     
     res.json(habitResponse);
   } catch (error) {
-    console.error('Error recording response:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/habits/:id/stats', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const habit = await prisma.habit.findUnique({
-      where: { id },
-      include: {
-        streak: true,
-        responses: {
-          orderBy: { date: 'desc' },
-          take: 30
-        }
-      }
-    });
-    
-    if (!habit) {
-      return res.status(404).json({ error: 'Habit not found' });
-    }
-    
-    const stats = {
-      total: habit.responses.length,
-      yes: habit.responses.filter(r => r.response === 'yes').length,
-      no: habit.responses.filter(r => r.response === 'no').length,
-      skip: habit.responses.filter(r => r.response === 'skip').length,
-      streak: habit.streak,
-      recentResponses: habit.responses
-    };
-    
-    res.json(stats);
-  } catch (error) {
-    console.error('Error fetching stats:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    environment: isProduction ? 'production' : 'development'
-  });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-  console.log(`📦 Environment: ${isProduction ? 'production' : 'development'}`);
 });

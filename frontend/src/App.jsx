@@ -12,19 +12,12 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('theme') || 'light';
-  });
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  };
-
 
   useEffect(() => {
     loadPendingHabits();
@@ -50,13 +43,11 @@ function App() {
       const updatedHabits = [...pendingHabits];
       
       if (direction === 'skip') {
-        // Move skipped habit to end of queue
         const skippedHabit = updatedHabits.splice(currentHabitIndex, 1)[0];
         updatedHabits.push(skippedHabit);
         setPendingHabits(updatedHabits);
         toast('Skipped for now', { icon: '↻' });
       } else {
-        // Remove habit from pending
         updatedHabits.splice(currentHabitIndex, 1);
         setPendingHabits(updatedHabits);
         setCurrentHabitIndex(prev => Math.min(prev, updatedHabits.length - 1));
@@ -82,20 +73,16 @@ function App() {
     }
   };
 
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
   const currentHabit = pendingHabits[currentHabitIndex];
   const remainingCount = pendingHabits.length;
 
   return (
     <div className="app">
-      <Toaster 
-        position="top-center"
-        toastOptions={{
-          style: {
-            background: theme === 'dark' ? '#2c2c2e' : '#ffffff',
-            color: theme === 'dark' ? '#ffffff' : '#1d1d1f',
-          },
-        }}
-      />
+      <Toaster position="top-center" />
       
       <HabitList 
         isOpen={showDrawer} 
@@ -105,16 +92,10 @@ function App() {
       
       <header className="app-header">
         <div className="header-left">
-          <button 
-            className="menu-button"
-            onClick={() => setShowDrawer(true)}
-          >
+          <button className="menu-button" onClick={() => setShowDrawer(true)}>
             <span className="menu-icon">☰</span>
           </button>
-          <button 
-            className="theme-toggle"
-            onClick={toggleTheme}
-          >
+          <button className="theme-toggle" onClick={toggleTheme}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
         </div>
@@ -132,9 +113,7 @@ function App() {
             })}
           </div>
           {remainingCount > 0 && (
-            <div className="remaining-count">
-              {remainingCount} remaining
-            </div>
+            <div className="remaining-count">{remainingCount} remaining</div>
           )}
         </div>
 
@@ -144,22 +123,13 @@ function App() {
               <div className="loading-spinner"></div>
             </div>
           ) : currentHabit ? (
-            <SwipeCard
-              key={currentHabit.id}
-              habit={currentHabit}
-              onSwipe={handleSwipe}
-            />
+            <SwipeCard habit={currentHabit} onSwipe={handleSwipe} />
           ) : (
             <div className="completion-card">
               <div className="completion-emoji">✨</div>
               <div className="completion-title">all caught up!</div>
-              <div className="completion-subtitle">
-                Come back tomorrow for more
-              </div>
-              <button 
-                className="add-habit-button"
-                onClick={() => setShowAddForm(true)}
-              >
+              <div className="completion-subtitle">Come back tomorrow for more</div>
+              <button className="add-habit-button" onClick={() => setShowAddForm(true)}>
                 + add new habit
               </button>
             </div>
@@ -168,19 +138,11 @@ function App() {
       </main>
 
       {showAddForm && (
-        <HabitForm
-          onSubmit={handleAddHabit}
-          onClose={() => setShowAddForm(false)}
-        />
+        <HabitForm onSubmit={handleAddHabit} onClose={() => setShowAddForm(false)} />
       )}
 
       {!loading && currentHabit && (
-        <button 
-          className="fab-add"
-          onClick={() => setShowAddForm(true)}
-        >
-          +
-        </button>
+        <button className="fab-add" onClick={() => setShowAddForm(true)}>+</button>
       )}
     </div>
   );
